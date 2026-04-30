@@ -381,6 +381,59 @@
 
   #fileInput, #pdfInput { display:none; }
 
+  /* ── DESCARGAR PLANTILLA ── */
+  .btn-mini.dl {
+    border-color: rgba(77,189,150,0.4);
+    color: var(--ok);
+    background: rgba(77,189,150,0.08);
+  }
+  .btn-mini.dl:hover {
+    border-color: var(--ok);
+    background: rgba(77,189,150,0.15);
+    color: var(--ok);
+  }
+
+  /* ── FOOTER CONTACTO ── */
+  .contact-footer {
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    padding-top: 28px;
+    text-align: center;
+  }
+
+  .contact-footer .cf-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 16px;
+  }
+
+  .contact-links {
+    display: flex; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+
+  .contact-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 9px 18px;
+    font-size: 0.83rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .contact-pill:hover {
+    border-color: var(--verde-light);
+    color: var(--verde-light);
+    background: rgba(74,124,111,0.1);
+  }
+
+  .contact-pill .ci { font-size: 1rem; }
+
   @media(max-width:600px){
     .summary-bar { gap:12px; }
     .stat .num { font-size:1.3rem; }
@@ -422,7 +475,7 @@
     </div>
     <div class="div-v"></div>
     <div class="stat">
-      <div class="num num-tot">12</div>
+      <div class="num num-tot">11</div>
       <div class="lbl">Total</div>
     </div>
     <div class="div-v"></div>
@@ -458,6 +511,22 @@
     </button>
   </div>
 
+  <!-- FOOTER CONTACTO -->
+  <div class="contact-footer">
+    <div class="cf-title">Contacto INASEP</div>
+    <div class="contact-links">
+      <a class="contact-pill" href="https://wa.me/56944061866" target="_blank">
+        <span class="ci">💬</span> WhatsApp +56 9 4406 1866
+      </a>
+      <a class="contact-pill" href="https://www.inasep.cl" target="_blank">
+        <span class="ci">🌐</span> www.inasep.cl
+      </a>
+      <a class="contact-pill" href="mailto:instituto@inasep.cl">
+        <span class="ci">✉️</span> instituto@inasep.cl
+      </a>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <!-- MODAL CÁMARA -->
@@ -491,11 +560,10 @@ const DOCS = [
   { id:4,  icon:"🎓", name:"Certificado de aprobación del curso de capacitación de seguridad privada",                                                     optional:false, note:null,              pages:[] },
   { id:5,  icon:"🏠", name:"Certificado o comprobante de residencia definitiva en Chile",                                                                  optional:true,  note:"Solo extranjeros", pages:[] },
   { id:6,  icon:"📋", name:"Certificado de antecedentes para fines especiales",                                                                            optional:false, note:null,              pages:[] },
-  { id:7,  icon:"🎖️", name:"Certificado de desvinculación sin sanción disciplinaria (FF.AA., PDI, Carabineros, Gendarmería) o declaración jurada simple",  optional:false, note:null,              pages:[] },
-  { id:8,  icon:"✍️", name:"Declaración jurada simple de no haber sido acusado por delitos",                                                              optional:false, note:null,              pages:[] },
-  { id:9,  icon:"⚖️", name:"Declaración jurada simple de no haber sido sancionado conforme a la Ley N°19.327",                                            optional:false, note:null,              pages:[] },
+  { id:8,  icon:"✍️", name:"Declaración jurada simple de no haber sido acusado por delitos",                                                              optional:false, note:null, dl:"https://docs.google.com/document/d/1myFYBVzzyFSwvOzjh84iNqt_qgYZn1e9/export?format=docx",              pages:[] },
+  { id:9,  icon:"⚖️", name:"Declaración jurada simple de no haber sido sancionado conforme a la Ley N°19.327",                                            optional:false, note:null, dl:"https://docs.google.com/document/d/1DIchORCiYtoKvzj-0kA24NmYX075FWeG/export?format=docx",              pages:[] },
   { id:10, icon:"🪖", name:"Certificado de situación militar al día",                                                                                      optional:false, note:null,              pages:[] },
-  { id:11, icon:"🔍", name:"Certificado de no ejercicio de funciones de supervisión/fiscalización en seguridad privada (últimos 2 años) o declaración jurada simple", optional:false, note:null, pages:[] },
+  { id:11, icon:"🔍", name:"Certificado de desvinculación sin sanción disciplinaria / Certificado de no ejercicio de funciones de supervisión/fiscalización en seguridad privada (últimos 2 años)", optional:false, note:null, dl:"https://docs.google.com/document/d/1SCO0iuwZicAafiNzuHt3PwRie1fHLBa4/export?format=docx", pages:[] },
 ];
 
 let activeCamDoc = null, camStream = null, facingMode = 'environment', pendingDoc = null;
@@ -548,6 +616,7 @@ function renderList() {
           <button class="btn-mini cam" data-a="cam" data-doc="${doc.id}">📷 Cámara</button>
           <button class="btn-mini" data-a="img" data-doc="${doc.id}">🖼️ Subir imagen</button>
           <button class="btn-mini" data-a="pdf" data-doc="${doc.id}">📑 Importar PDF</button>
+          ${doc.dl ? `<a class="btn-mini dl" href="${doc.dl}" target="_blank" download>📥 Descargar plantilla</a>` : ''}
           ${done?`<button class="btn-mini" data-a="clear" data-doc="${doc.id}" style="color:var(--danger);border-color:rgba(224,92,106,0.3)">🗑 Limpiar</button>`:''}
         </div>
         ${done ? `<div class="doc-thumbs">${thumbs}</div>` : ''}
