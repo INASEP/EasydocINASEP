@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>INASEP PDF Fácil</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Paleta INASEP — verde pizarra del escudo */
+    --verde:       #4a7c6f;
+    --verde-dark:  #2e5248;
+    --verde-light: #5e9284;
+    --verde-muted: #3a6359;
+    --bg:          #0f1a17;
+    --surface:     #172420;
+    --surface2:    #1f302b;
+    --border:      #2d4840;
+    --border2:     #3a5e53;
+    --ok:          #4dbd96;
+    --warn:        #e8a838;
+    --danger:      #e05c6a;
+    --text:        #ddeee9;
+    --text2:       #7eaa9a;
+    --radius:      14px;
+    --shadow:      0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(74,124,111,0.15) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, rgba(46,82,72,0.12) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 40px 0 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .logo-wrap {
+    width: 100px; height: 100px;
+    display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 4px 16px rgba(74,124,111,0.4));
+  }
+
+  .logo-wrap img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+
+  /* Placeholder si no hay logo.png */
+  .logo-wrap img.missing {
+    display: none;
+  }
+
+  .logo-placeholder {
+    width: 100px; height: 100px;
+    border: 2px dashed var(--border2);
+    border-radius: 16px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    color: var(--text2); font-size: 0.7rem;
+    display: none; /* se muestra solo si falla la img */
+  }
+
+  .logo-placeholder span { font-size: 2rem; opacity: 0.4; }
+
+  .header-text h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .header-text h1 em {
+    font-style: normal;
+    color: var(--verde-light);
+  }
+
+  .header-text p {
+    margin-top: 8px;
+    font-size: clamp(0.82rem, 2.5vw, 0.95rem);
+    color: var(--text2);
+    max-width: 480px;
+    line-height: 1.5;
+  }
+
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px;
+    background: rgba(74,124,111,0.15);
+    border: 1px solid rgba(74,124,111,0.4);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 0.75rem;
+    color: var(--verde-light);
+    font-weight: 500;
+  }
+
+  /* ── RESUMEN ── */
+  .summary-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 28px;
+    display: flex; align-items: center;
+    gap: 20px; flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; min-width: 52px;
+  }
+
+  .stat .num {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.7rem; font-weight: 800; line-height: 1;
+  }
+
+  .stat .lbl { font-size: 0.68rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; }
+
+  .num-ok   { color: var(--ok); }
+  .num-pend { color: var(--warn); }
+  .num-tot  { color: var(--verde-light); }
+
+  .div-v { width:1px; height:36px; background:var(--border); flex-shrink:0; }
+
+  .pbar-wrap { flex:1; min-width:130px; }
+  .pbar { height:8px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-bottom:6px; }
+  .pbar-fill {
+    height:100%;
+    background: linear-gradient(90deg, var(--verde), var(--ok));
+    border-radius:100px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .pbar-lbl { font-size:0.77rem; color:var(--text2); }
+  .pbar-lbl strong { color:var(--text); font-weight:600; }
+
+  /* ── LISTA DOCUMENTOS ── */
+  .sec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.78rem; font-weight: 700;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 12px;
+  }
+
+  .doc-list { display:flex; flex-direction:column; gap:9px; margin-bottom:32px; }
+
+  .doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.25s;
+  }
+
+  .doc-card.is-done { border-color: rgba(77,189,150,0.4); }
+
+  .doc-header {
+    display:flex; align-items:center; gap:13px;
+    padding: 13px 17px; cursor:pointer; user-select:none;
+  }
+
+  .doc-status {
+    width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; flex-shrink:0;
+    border:2px solid var(--border);
+    background:var(--surface2);
+    transition: all 0.25s;
+  }
+
+  .doc-card.is-done .doc-status {
+    background: rgba(77,189,150,0.12);
+    border-color: var(--ok);
+  }
+
+  .doc-info { flex:1; min-width:0; }
+
+  .doc-name { font-size:0.87rem; font-weight:500; line-height:1.35; }
+
+  .doc-meta { display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+
+  .badge-opt {
+    font-size:0.64rem;
+    background:rgba(232,168,56,0.12); border:1px solid rgba(232,168,56,0.4);
+    color:var(--warn); border-radius:100px; padding:1px 8px; font-weight:600;
+  }
+
+  .badge-ok  { font-size:0.7rem; color:var(--ok); }
+  .badge-miss { font-size:0.7rem; color:var(--warn); }
+
+  .doc-arrow { font-size:0.85rem; color:var(--text2); transition:transform 0.25s; flex-shrink:0; }
+  .doc-card.expanded .doc-arrow { transform:rotate(180deg); }
+
+  .doc-body {
+    display:none; padding:0 17px 17px;
+    border-top:1px solid var(--border);
+  }
+  .doc-card.expanded .doc-body { display:block; }
+
+  .doc-actions { display:flex; gap:8px; flex-wrap:wrap; padding:13px 0 10px; }
+
+  .btn-mini {
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; color:var(--text);
+    font-family:'DM Sans',sans-serif;
+    font-size:0.8rem; font-weight:500;
+    padding:7px 14px; cursor:pointer;
+    transition:all 0.18s; white-space:nowrap;
+  }
+
+  .btn-mini:hover { border-color:var(--verde-light); color:var(--verde-light); }
+
+  .btn-mini.cam {
+    border-color:rgba(74,124,111,0.5);
+    color:var(--ok);
+    background:rgba(74,124,111,0.1);
+  }
+
+  .doc-thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+
+  .thumb {
+    width:70px; height:90px; border-radius:8px;
+    overflow:hidden; position:relative;
+    border:1px solid var(--border); background:var(--surface2); flex-shrink:0;
+  }
+  .thumb img { width:100%; height:100%; object-fit:cover; }
+  .thumb .del {
+    position:absolute; top:3px; right:3px;
+    width:18px; height:18px;
+    background:rgba(224,92,106,0.9); border:none; border-radius:50%;
+    color:#fff; font-size:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity 0.2s;
+  }
+  .thumb:hover .del { opacity:1; }
+  .thumb .pg { position:absolute; bottom:3px; left:3px;
+    background:rgba(0,0,0,0.7); color:var(--text2);
+    font-size:9px; border-radius:4px; padding:1px 5px; }
+
+  /* ── CÁMARA ── */
+  .cam-modal {
+    display:none; position:fixed; inset:0;
+    background:#000; z-index:2000; flex-direction:column;
+  }
+  .cam-modal.active { display:flex; }
+  #videoEl { width:100%; flex:1; object-fit:cover; }
+  canvas { display:none; }
+
+  .cam-bar {
+    background:#0f1a17; padding:20px;
+    display:flex; align-items:center;
+    justify-content:space-between; gap:16px;
+  }
+
+  .cam-info { font-size:0.75rem; color:var(--text2); max-width:180px; line-height:1.4; }
+  .cam-info strong { color:var(--text); font-size:0.82rem; display:block; margin-bottom:2px; }
+
+  .btn-capture {
+    width:68px; height:68px; border-radius:50%;
+    background:#fff; border:5px solid rgba(255,255,255,0.22);
+    cursor:pointer; transition:transform 0.12s; flex-shrink:0;
+  }
+  .btn-capture:active { transform:scale(0.9); }
+
+  .cam-side { display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+
+  .btn-cam-sm {
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); padding:7px 14px; border-radius:100px;
+    cursor:pointer; font-family:'DM Sans',sans-serif;
+    font-size:0.8rem; transition:all 0.2s; white-space:nowrap;
+  }
+  .btn-cam-sm:hover { background:var(--surface); }
+
+  /* ── PANEL GENERAR ── */
+  .gen-panel {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:24px;
+  }
+
+  .gen-panel h2 {
+    font-family:'Syne',sans-serif;
+    font-size:1rem; font-weight:700; margin-bottom:18px;
+  }
+
+  .gen-opts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  @media(max-width:480px){ .gen-opts { grid-template-columns:1fr; } }
+
+  .opt label {
+    display:block; font-size:0.72rem; color:var(--text2);
+    text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;
+  }
+
+  .opt input, .opt select {
+    width:100%; background:var(--surface2);
+    border:1px solid var(--border); border-radius:8px;
+    padding:9px 13px; color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:0.88rem;
+    outline:none; transition:border-color 0.2s;
+  }
+  .opt input:focus, .opt select:focus { border-color:var(--verde-light); }
+  .opt select option { background:#172420; }
+
+  .btn-gen {
+    width:100%;
+    background: linear-gradient(135deg, var(--verde-dark), var(--verde));
+    border:1px solid var(--verde-light);
+    border-radius:var(--radius);
+    color:#fff; font-family:'Syne',sans-serif;
+    font-size:1rem; font-weight:700; padding:15px;
+    cursor:pointer; transition:all 0.22s;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    box-shadow:0 4px 20px rgba(46,82,72,0.5);
+    letter-spacing:0.2px;
+  }
+  .btn-gen:hover:not(:disabled) {
+    transform:translateY(-2px);
+    box-shadow:0 8px 32px rgba(74,124,111,0.5);
+    background:linear-gradient(135deg, var(--verde-muted), var(--verde-light));
+  }
+  .btn-gen:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+
+  .btn-gen .spin {
+    width:18px; height:18px;
+    border:2px solid rgba(255,255,255,0.35); border-top-color:#fff;
+    border-radius:50%; animation:spin 0.7s linear infinite; display:none;
+  }
+  .btn-gen.loading .spin { display:block; }
+  .btn-gen.loading .gtxt { display:none; }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── TOAST ── */
+  .toast {
+    position:fixed; bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:100px; padding:11px 22px;
+    font-size:0.85rem; color:var(--text);
+    box-shadow:var(--shadow);
+    transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    z-index:3000; white-space:nowrap;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.ok  { border-color:rgba(77,189,150,0.5); }
+  .toast.err { border-color:rgba(224,92,106,0.5); }
+
+  #fileInput, #pdfInput { display:none; }
+
+  /* ── DESCARGAR PLANTILLA ── */
+  .btn-mini.dl {
+    border-color: rgba(77,189,150,0.4);
+    color: var(--ok);
+    background: rgba(77,189,150,0.08);
+  }
+  .btn-mini.dl:hover {
+    border-color: var(--ok);
+    background: rgba(77,189,150,0.15);
+    color: var(--ok);
+  }
+
+  /* ── FOOTER CONTACTO ── */
+  .contact-footer {
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    padding-top: 28px;
+    text-align: center;
+  }
+
+  .contact-footer .cf-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.8px; margin-bottom: 16px;
+  }
+
+  .contact-links {
+    display: flex; justify-content: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+
+  .contact-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 9px 18px;
+    font-size: 0.83rem;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+
+  .contact-pill:hover {
+    border-color: var(--verde-light);
+    color: var(--verde-light);
+    background: rgba(74,124,111,0.1);
+  }
+
+  .contact-pill .ci { font-size: 1rem; }
+
+  /* ── INSTRUCTIVO ── */
+  .instructivo {
+    background: linear-gradient(135deg, rgba(74,124,111,0.12), rgba(46,82,72,0.08));
+    border: 1px solid rgba(74,124,111,0.35);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 28px;
+  }
+  .inst-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; font-weight: 700;
+    color: var(--verde-light);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .inst-steps {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .inst-step {
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .inst-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(74,124,111,0.3); border: 1px solid rgba(74,124,111,0.5);
+    color: var(--verde-light); font-family: 'Syne', sans-serif;
+    font-size: 0.75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .inst-text {
+    font-size: 0.84rem; color: var(--text); line-height: 1.5;
+  }
+  .inst-text strong { color: var(--ok); }
+  .inst-text em { font-style: normal; color: var(--warn); }
+  .inst-tip {
+    margin-top: 14px;
+    background: rgba(232,168,56,0.08);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 8px 8px 0;
+    padding: 9px 14px;
+    font-size: 0.8rem; color: var(--text2); line-height: 1.5;
+  }
+  .inst-tip strong { color: var(--warn); }
+
+  @media(max-width:600px){
+    .summary-bar { gap:12px; }
+    .stat .num { font-size:1.3rem; }
+    .doc-name { font-size:0.82rem; }
+    .logo-wrap { width:80px; height:80px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-wrap">
+      <img src="logo.png" alt="Logo INASEP" id="logoImg" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'">
+    </div>
+    <div class="logo-placeholder" id="logoFallback">
+      <span>🛡️</span>
+      logo.png
+    </div>
+
+    <div class="header-text">
+      <h1>INASEP <em>PDF Fácil</em></h1>
+      <p>Fotografía tus documentos y conviértelos automáticamente a PDF para subir a la SPD.</p>
+      <div class="header-badge">🔒 Cursos de Seguridad Privada</div>
+    </div>
+  </header>
+
+  <!-- RESUMEN -->
+  <div class="summary-bar">
+    <div class="stat">
+      <div class="num num-ok" id="cntDone">0</div>
+      <div class="lbl">Listos</div>
+    </div>
+    <div class="div-v"></div>
+    <div class="stat">
+      <div class="num num-pend" id="cntPend">12</div>
+      <div class="lbl">Pendientes</div>
+    </div>
+    <div class="div-v"></div>
+    <div class="stat">
+      <div class="num num-tot">12</div>
+      <div class="lbl">Total</div>
+    </div>
+    <div class="div-v"></div>
+    <div class="pbar-wrap">
+      <div class="pbar"><div class="pbar-fill" id="pbarFill" style="width:0%"></div></div>
+      <div class="pbar-lbl" id="pbarLbl">Fotografía o sube cada documento en su casilla</div>
+    </div>
+  </div>
+
+  <!-- INSTRUCTIVO -->
+  <div class="instructivo">
+    <div class="inst-title">📋 ¿Cómo usar esta herramienta? — Paso a paso</div>
+    <div class="inst-steps">
+      <div class="inst-step">
+        <div class="inst-num">1</div>
+        <div class="inst-text">Toca el nombre de un documento para <strong>abrirlo</strong>.</div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">2</div>
+        <div class="inst-text">Si necesitas la plantilla, presiona <strong>📥 Descargar plantilla</strong>, complétala e imprímela (o guárdala).</div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">3</div>
+        <div class="inst-text">Para agregar el documento tienes 3 opciones:<br>
+          <strong>📷 Cámara</strong> — sácale una foto directamente desde el celular.<br>
+          <strong>🖼️ Subir imagen</strong> — elige una foto que ya tengas guardada.<br>
+          <strong>📑 Importar PDF</strong> — si ya lo tienes en PDF, súbelo directo.
+        </div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">4</div>
+        <div class="inst-text">Cuando el documento quede marcado con <strong>✓</strong>, ¡está listo!</div>
+      </div>
+      <div class="inst-step">
+        <div class="inst-num">5</div>
+        <div class="inst-text">Una vez que tengas <em>todos los documentos</em>, baja hasta abajo y presiona <strong>📄 Generar y descargar PDF</strong>. Se descargará un solo archivo con todo.</div>
+      </div>
+    </div>
+    <div class="inst-tip"><strong>⚠️ Importante:</strong> todos los documentos marcados sin ★ son <strong>obligatorios</strong>. Los marcados con "Opcional" solo los necesitan extranjeros.</div>
+  </div>
+
+  <!-- DOCUMENTOS -->
+  <div class="sec-title">Documentos requeridos</div>
+  <div class="doc-list" id="docList"></div>
+
+  <!-- GENERAR -->
+  <div class="gen-panel">
+    <h2>📥 Generar PDF consolidado</h2>
+    <div class="gen-opts">
+      <div class="opt">
+        <label>Nombre del archivo</label>
+        <input type="text" id="pdfName" value="antecedentes-seguridad-privada">
+      </div>
+      <div class="opt">
+        <label>Orientación de página</label>
+        <select id="pdfOrient">
+          <option value="portrait">Vertical (Portrait)</option>
+          <option value="landscape">Horizontal (Landscape)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-gen" id="btnGen" disabled>
+      <div class="spin"></div>
+      <span class="gtxt">📄 Generar y descargar PDF</span>
+    </button>
+  </div>
+
+  <!-- FOOTER CONTACTO -->
+  <div class="contact-footer">
+    <div class="cf-title">Contacto INASEP</div>
+    <div class="contact-links">
+      <a class="contact-pill" href="https://wa.me/56944061866" target="_blank">
+        <span class="ci">💬</span> WhatsApp +56 9 4406 1866
+      </a>
+      <a class="contact-pill" href="https://www.inasep.cl" target="_blank">
+        <span class="ci">🌐</span> www.inasep.cl
+      </a>
+      <a class="contact-pill" href="mailto:instituto@inasep.cl">
+        <span class="ci">✉️</span> instituto@inasep.cl
+      </a>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- MODAL CÁMARA -->
+<div class="cam-modal" id="camModal">
+  <video id="videoEl" autoplay playsinline muted></video>
+  <canvas id="snapCanvas"></canvas>
+  <div class="cam-bar">
+    <div class="cam-info">
+      <strong id="camDocName">Documento</strong>
+      Fotografiando este documento
+    </div>
+    <button class="btn-capture" id="btnCapture"></button>
+    <div class="cam-side">
+      <button class="btn-cam-sm" id="btnFlip">🔄 Voltear</button>
+      <button class="btn-cam-sm" id="btnCloseCam">✕ Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept="image/*" multiple>
+<input type="file" id="pdfInput" accept="application/pdf">
+
+<script>
+// ══════════ DOCUMENTOS ══════════
+const DOCS = [
+  { id:0,  icon:"🪪", name:"Cédula de identidad",                                                                                                        optional:false, note:null,              pages:[] },
+  { id:1,  icon:"📜", name:"Certificado de licencia de enseñanza media o equivalente",                                                                    optional:false, note:null,              pages:[] },
+  { id:2,  icon:"🏥", name:"Certificado médico de aptitud física",                                                                                         optional:false, note:null,              pages:[] },
+  { id:3,  icon:"🧠", name:"Certificado psicológico o psiquiátrico de aptitud psíquica",                                                                   optional:false, note:null,              pages:[] },
+  { id:4,  icon:"🎓", name:"Certificado de aprobación del curso de capacitación de seguridad privada",                                                     optional:false, note:null,              pages:[] },
+  { id:5,  icon:"🏠", name:"Certificado o comprobante de residencia definitiva en Chile",                                                                  optional:true,  note:"Solo extranjeros", pages:[] },
+  { id:6,  icon:"📋", name:"Certificado de antecedentes para fines especiales",                                                                            optional:false, note:null,              pages:[] },
+  { id:8,  icon:"✍️", name:"Declaración jurada simple de no haber sido acusado por delitos",                                                              optional:false, note:null, dl:"https://docs.google.com/document/d/1myFYBVzzyFSwvOzjh84iNqt_qgYZn1e9/export?format=docx",              pages:[] },
+  { id:9,  icon:"⚖️", name:"Declaración jurada simple de no haber sido sancionado conforme a la Ley N°19.327",                                            optional:false, note:null, dl:"https://docs.google.com/document/d/1DIchORCiYtoKvzj-0kA24NmYX075FWeG/export?format=docx",              pages:[] },
+  { id:10, icon:"🪖", name:"Certificado de situación militar al día",                                                                                      optional:false, note:null,              pages:[] },
+  { id:11, icon:"🔍", name:"Certificado de desvinculación sin sanción disciplinaria / Certificado de no ejercicio de funciones de supervisión/fiscalización en seguridad privada (últimos 2 años)", optional:false, note:null, dl:"https://docs.google.com/document/d/1SCO0iuwZicAafiNzuHt3PwRie1fHLBa4/export?format=docx", pages:[] },
+  { id:12, icon:"📝", name:"Declaración jurada simple (Inciso tercero del artículo 1° de la ley N° 21.659, sobre seguridad privada)",                                                                                                             optional:false, note:null, dl:"https://docs.google.com/document/d/1wgH97F5a2JAGXUZ1hDqHoaoUOKndDkJy/export?format=docx",              pages:[] },
+];
+
+let activeCamDoc = null, camStream = null, facingMode = 'environment', pendingDoc = null;
+
+// ── Toast ──
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${type}`; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Render ──
+function render() { renderList(); updateSummary(); }
+
+function renderList() {
+  const list = document.getElementById('docList');
+  const exp = new Set();
+  list.querySelectorAll('.doc-card.expanded').forEach(c => exp.add(+c.dataset.id));
+  list.innerHTML = '';
+
+  DOCS.forEach(doc => {
+    const done = doc.pages.length > 0;
+    const card = document.createElement('div');
+    card.className = `doc-card${done?' is-done':''}${exp.has(doc.id)?' expanded':''}`;
+    card.dataset.id = doc.id;
+
+    const thumbs = doc.pages.map((p, pi) => `
+      <div class="thumb">
+        <img src="${p}" alt="">
+        <div class="pg">p.${pi+1}</div>
+        <button class="del" data-doc="${doc.id}" data-pg="${pi}">✕</button>
+      </div>`).join('');
+
+    card.innerHTML = `
+      <div class="doc-header">
+        <div class="doc-status">${done ? '✓' : doc.icon}</div>
+        <div class="doc-info">
+          <div class="doc-name">${doc.name}</div>
+          <div class="doc-meta">
+            ${doc.optional ? `<span class="badge-opt">${doc.note||'Opcional'}</span>` : ''}
+            ${done
+              ? `<span class="badge-ok">✓ ${doc.pages.length} página${doc.pages.length!==1?'s':''}</span>`
+              : `<span class="badge-miss">Sin páginas${doc.optional?' (opcional)':''}</span>`}
+          </div>
+        </div>
+        <div class="doc-arrow">▾</div>
+      </div>
+      <div class="doc-body">
+        <div class="doc-actions">
+          <button class="btn-mini cam" data-a="cam" data-doc="${doc.id}">📷 Cámara</button>
+          <button class="btn-mini" data-a="img" data-doc="${doc.id}">🖼️ Subir imagen</button>
+          <button class="btn-mini" data-a="pdf" data-doc="${doc.id}">📑 Importar PDF</button>
+          ${doc.dl ? `<a class="btn-mini dl" href="${doc.dl}" target="_blank" download>📥 Descargar plantilla</a>` : ''}
+          ${done?`<button class="btn-mini" data-a="clear" data-doc="${doc.id}" style="color:var(--danger);border-color:rgba(224,92,106,0.3)">🗑 Limpiar</button>`:''}
+        </div>
+        ${done ? `<div class="doc-thumbs">${thumbs}</div>` : ''}
+      </div>`;
+
+    card.querySelector('.doc-header').addEventListener('click', () => card.classList.toggle('expanded'));
+
+    card.querySelectorAll('[data-a]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const did = +btn.dataset.doc, a = btn.dataset.a;
+        if (a==='cam')   openCam(did);
+        if (a==='img')   trigImg(did);
+        if (a==='pdf')   trigPdf(did);
+        if (a==='clear') { DOCS[did].pages=[]; render(); toast('Páginas eliminadas'); }
+      });
+    });
+
+    card.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        DOCS[+btn.dataset.doc].pages.splice(+btn.dataset.pg, 1);
+        render(); toast('Página eliminada');
+      });
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function updateSummary() {
+  const req   = DOCS.filter(d => !d.optional);
+  const done  = req.filter(d => d.pages.length > 0).length;
+  const total = DOCS.reduce((s,d) => s+d.pages.length, 0);
+  const pct   = Math.round((done/req.length)*100);
+  document.getElementById('cntDone').textContent  = done;
+  document.getElementById('cntPend').textContent  = req.length - done;
+  document.getElementById('pbarFill').style.width = pct+'%';
+  document.getElementById('pbarLbl').innerHTML    = total > 0
+    ? `<strong>${done} de ${req.length}</strong> obligatorios — ${total} página${total!==1?'s':''} en total`
+    : 'Fotografía o sube cada documento en su casilla';
+  document.getElementById('btnGen').disabled = total === 0;
+}
+
+function expandCard(id) {
+  document.querySelectorAll('.doc-card').forEach(c => { if(+c.dataset.id===id) c.classList.add('expanded'); });
+}
+
+// ── Cámara ──
+function openCam(id) {
+  activeCamDoc = id;
+  document.getElementById('camDocName').textContent = DOCS[id].name;
+  startStream();
+}
+
+async function startStream() {
+  try {
+    if (camStream) camStream.getTracks().forEach(t=>t.stop());
+    camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode},audio:false});
+    document.getElementById('videoEl').srcObject = camStream;
+    document.getElementById('camModal').classList.add('active');
+  } catch { toast('No se pudo acceder a la cámara','err'); }
+}
+
+document.getElementById('btnCapture').addEventListener('click', () => {
+  const v=document.getElementById('videoEl'), c=document.getElementById('snapCanvas');
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  DOCS[activeCamDoc].pages.push(c.toDataURL('image/jpeg',0.9));
+  render(); expandCard(activeCamDoc);
+  toast('📸 Foto añadida ✓','ok');
+});
+
+document.getElementById('btnFlip').addEventListener('click',()=>{
+  facingMode = facingMode==='environment'?'user':'environment'; startStream();
+});
+
+document.getElementById('btnCloseCam').addEventListener('click',()=>{
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  document.getElementById('camModal').classList.remove('active');
+});
+
+// ── Imágenes ──
+function trigImg(id) { pendingDoc=id; const f=document.getElementById('fileInput'); f.value=''; f.click(); }
+
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const files=Array.from(e.target.files).filter(f=>f.type.startsWith('image/'));
+  if(!files.length) return;
+  let done=0;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      DOCS[pendingDoc].pages.push(ev.target.result);
+      if(++done===files.length){ render(); expandCard(pendingDoc); toast(`${files.length} imagen${files.length!==1?'es':''} añadida${files.length!==1?'s':''} ✓`,'ok'); }
+    };
+    r.readAsDataURL(f);
+  });
+});
+
+// ── PDF ──
+function trigPdf(id) { pendingDoc=id; const p=document.getElementById('pdfInput'); p.value=''; p.click(); }
+
+document.getElementById('pdfInput').addEventListener('change', async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  toast('Procesando PDF…');
+  try {
+    if(!window.pdfjsLib){
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const vp=page.getViewport({scale:1.8});
+      const cv=document.createElement('canvas');
+      cv.width=vp.width; cv.height=vp.height;
+      await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+      DOCS[pendingDoc].pages.push(cv.toDataURL('image/jpeg',0.88));
+    }
+    render(); expandCard(pendingDoc);
+    toast(`${pdf.numPages} páginas importadas ✓`,'ok');
+  } catch(err){ console.error(err); toast('Error al procesar PDF','err'); }
+});
+
+function loadScript(src){
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+}
+
+// ── Generar PDF ──
+document.getElementById('btnGen').addEventListener('click', async ()=>{
+  const pages=DOCS.flatMap(d=>d.pages);
+  if(!pages.length) return;
+  const btn=document.getElementById('btnGen');
+  btn.classList.add('loading'); btn.disabled=true;
+  await new Promise(r=>setTimeout(r,40));
+  try{
+    const {jsPDF}=window.jspdf;
+    const orient=document.getElementById('pdfOrient').value;
+    const name=(document.getElementById('pdfName').value.trim()||'antecedentes')+'.pdf';
+    const pdf=new jsPDF({orientation:orient,unit:'mm',format:'a4'});
+    const pW=orient==='portrait'?210:297, pH=orient==='portrait'?297:210;
+    for(let i=0;i<pages.length;i++){
+      if(i>0) pdf.addPage();
+      const img=new Image(); img.src=pages[i];
+      await new Promise(r=>{img.onload=r;});
+      const ia=img.width/img.height, pa=pW/pH;
+      let dW,dH,x,y;
+      if(ia>pa){dW=pW;dH=pW/ia;x=0;y=(pH-dH)/2;}
+      else{dH=pH;dW=pH*ia;x=(pW-dW)/2;y=0;}
+      pdf.addImage(pages[i],pages[i].startsWith('data:image/png')?'PNG':'JPEG',x,y,dW,dH,undefined,'FAST');
+    }
+    pdf.save(name);
+    toast(`✅ PDF generado (${pages.length} páginas)`,'ok');
+  }catch(err){console.error(err);toast('Error al generar el PDF','err');}
+  finally{btn.classList.remove('loading');btn.disabled=false;}
+});
+
+render();
+</script>
+</body>
+</html>
